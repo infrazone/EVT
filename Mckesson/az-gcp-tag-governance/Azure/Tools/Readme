@@ -1,0 +1,237 @@
+# Azure Tag Compliance Scanner
+
+## Overview
+A PowerShell-based tool with GUI interface for scanning Azure resources and checking tag compliance across subscriptions.
+
+## Features
+- GUI interface for easy tag management
+- Pre-configured essential Azure tags
+- Real-time scan progress tracking
+- Detailed Excel reporting with multiple worksheets
+- Resource group and subscription summaries
+- Custom tag value validation
+- Batch scanning capabilities
+- Export functionality with detailed analytics
+
+## Prerequisites
+
+### Required Software
+1. Windows PowerShell 5.1 or PowerShell 7.x
+2. .NET Framework 4.7.2 or later
+3. Required PowerShell modules:
+   - Az.Accounts
+   - Az.Resources
+   - ImportExcel
+
+### Azure Requirements
+1. Active Azure subscription
+2. Account with appropriate permissions:
+   - Reader access to subscriptions
+   - Reader access to resources
+   - Permission to list subscriptions
+
+## Installation
+
+1. **Clone or Download Files**
+   - Download `AzureTagScanner.ps1`
+   - Download `config.json` (optional - will be created if not present)
+
+2. **Install Required PowerShell Modules**
+   ```powershell
+   # Run PowerShell as Administrator
+   Install-Module -Name Az -Scope CurrentUser -Repository PSGallery -Force
+   Install-Module -Name ImportExcel -Scope CurrentUser -Force
+   ```
+
+3. **Azure Authentication**
+   ```powershell
+   # Connect to Azure (required before first run)
+   Connect-AzAccount
+   ```
+
+## Running the Script
+
+### GUI Mode (Default)
+1. Open PowerShell
+2. Navigate to script directory:
+   ```powershell
+   cd C:\path\to\script
+   ```
+3. Run the script:
+   ```powershell
+   .\AzureTagScanner.ps1
+   ```
+
+### Command Line Mode
+```powershell
+# Run without GUI (for automation)
+.\AzureTagScanner.ps1 -ShowGui $false
+
+# Specify custom config file
+.\AzureTagScanner.ps1 -ConfigPath "C:\custom\config.json"
+```
+
+## Using the Application
+
+### 1. Tag Configuration
+- Navigate to "Tag Configuration" tab
+- Pre-configured tags:
+  - core-cost-center
+  - core-financial-bu
+  - core-financial-sub-bu
+  - core-snow-as-number
+  - core-snow-ba-number
+  - core-subscription-owner
+  - snow-application-name
+  - snow-application-owner
+  - snow-business-criticality
+  - snow-data-classification
+  - snow-environment
+  - snow-service-owner
+
+### 2. Adding Custom Tags
+1. Click "Add New Tag"
+2. Enter tag details:
+   - Name
+   - Required status
+   - Allowed values (optional)
+3. Click "Save"
+
+### 3. Running a Scan
+1. Switch to "Scan Results" tab
+2. Select target subscriptions
+3. Click "Start Scan"
+4. Monitor progress in status bar
+
+### 4. Exporting Results
+1. Click "Export Results"
+2. Choose export location
+3. Review generated Excel file with worksheets:
+   - Non-compliant Resources
+   - Subscription Summary
+   - Resource Group Summary
+   - Tag Summary
+
+## Configuration File
+
+The `config.json` file contains tag definitions and scanner settings:
+
+```json
+{
+    "RequiredTags": [
+        {
+            "Name": "core-cost-center",
+            "Required": true,
+            "AllowedValues": []
+        },
+        // ... other tags ...
+    ]
+}
+```
+
+## Excel Report Structure
+
+### Worksheet 1: Non-compliant Resources
+- Resource details
+- Missing tags
+- Invalid tag values
+- Resource group info
+
+### Worksheet 2: Subscription Summary
+- Non-compliant resource count
+- Tag compliance percentage
+- Critical issues summary
+
+### Worksheet 3: Resource Group Summary
+- Compliance by resource group
+- Missing tag patterns
+- Resource distribution
+
+### Worksheet 4: Tag Summary
+- Tag usage statistics
+- Common compliance issues
+- Trend analysis
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Module Not Found**
+   ```powershell
+   # Install missing module
+   Install-Module -Name ModuleName -Force
+   ```
+
+2. **Azure Connection Failed**
+   ```powershell
+   # Check connection
+   Get-AzContext
+   # Reconnect if needed
+   Connect-AzAccount
+   ```
+
+3. **Permission Errors**
+   - Verify Azure role assignments
+   - Check subscription access
+
+### Error Messages
+
+- "Not connected to Azure"
+  - Solution: Run `Connect-AzAccount`
+  
+- "Configuration file not found"
+  - Solution: Script will create default config
+
+- "Access denied"
+  - Solution: Check Azure permissions
+
+## Best Practices
+
+1. **Regular Scanning**
+   - Schedule weekly scans
+   - Archive reports
+   - Monitor trends
+
+2. **Tag Management**
+   - Keep documentation updated
+   - Review tag usage regularly
+   - Validate tag values
+
+3. **Report Analysis**
+   - Review all worksheets
+   - Track compliance trends
+   - Address critical issues first
+
+## Support
+
+For issues:
+1. Check troubleshooting guide
+2. Verify prerequisites
+3. Check Azure permissions
+4. Review error logs
+
+## Updates and Maintenance
+
+1. **Keeping Up-to-Date**
+   ```powershell
+   # Update PowerShell modules
+   Update-Module Az
+   Update-Module ImportExcel
+   ```
+
+2. **Maintenance Tasks**
+   - Regular configuration review
+   - Clean up old reports
+   - Update allowed values
+
+## License
+This tool is provided as-is under the MIT license.
+
+## Contributing
+Contributions are welcome:
+1. Fork the repository
+2. Create feature branch
+3. Submit pull request with:
+   - Clear description
+   - Updated documentation
+   - Test results

@@ -1,8 +1,11 @@
+using namespace System.Windows.Forms
+using namespace System.Drawing
+
 # Azure Tag Compliance Scanner
 # Version: 2.0
 # Description: GUI tool for scanning Azure resources for tag compliance
 
-# Requires -Modules Az.Accounts, Az.Resources, ImportExcel
+#Requires -Modules Az.Accounts, Az.Resources, ImportExcel
 
 [CmdletBinding()]
 param (
@@ -12,23 +15,13 @@ param (
     [switch]$ShowGui = $true
 )
 
-# Import required modules
-using namespace System.Windows.Forms
-using namespace System.Drawing
-
 # Function to ensure required modules are installed
 function Install-RequiredModules {
     $modules = @('Az.Accounts', 'Az.Resources', 'ImportExcel')
     foreach ($module in $modules) {
-        try {
-            if (!(Get-Module -ListAvailable -Name $module)) {
-                Write-Host "Installing required module: $module"
-                Install-Module -Name $module -Scope CurrentUser -Force -AllowClobber -ErrorAction Stop
-            }
-            Import-Module $module -ErrorAction Stop
-        }
-        catch {
-            throw "Failed to install/import module $module : $_"
+        if (!(Get-Module -ListAvailable -Name $module)) {
+            Write-Host "Installing required module: $module"
+            Install-Module -Name $module -Scope CurrentUser -Force -AllowClobber
         }
     }
 }
@@ -48,11 +41,11 @@ function Test-AzureConnection {
         return $true
     }
     catch {
-        [System.Windows.Forms.MessageBox]::Show(
+        $msgBox = [MessageBox]::Show(
             "Failed to connect to Azure. Please ensure you have the right credentials and permissions.`n`nError: $_",
             "Connection Error",
-            [System.Windows.Forms.MessageBoxButtons]::OK,
-            [System.Windows.Forms.MessageBoxIcon]::Error
+            [MessageBoxButtons]::OK,
+            [MessageBoxIcon]::Error
         )
         return $false
     }
@@ -66,10 +59,6 @@ function Get-TagConfiguration {
     try {
         if (Test-Path $ConfigPath) {
             $config = Get-Content $ConfigPath -Raw | ConvertFrom-Json
-            # Validate configuration structure
-            if (!$config.RequiredTags -or $config.RequiredTags.Count -eq 0) {
-                throw "Invalid configuration: RequiredTags section is missing or empty"
-            }
         }
         else {
             # Default configuration
@@ -154,21 +143,21 @@ function New-TagScannerForm {
         [object]$Config
     )
 
-    $form = New-Object System.Windows.Forms.Form
+    $form = New-Object Form
     $form.Text = "Azure Tag Compliance Scanner"
-    $form.Size = New-Object System.Drawing.Size(1200, 800)
+    $form.Size = New-Object Size(1200, 800)
     $form.StartPosition = "CenterScreen"
     $form.Icon = [System.Drawing.Icon]::ExtractAssociatedIcon([System.Diagnostics.Process]::GetCurrentProcess().MainModule.FileName)
 
     # Create tab control
-    $tabControl = New-Object System.Windows.Forms.TabControl
-    $tabControl.Size = New-Object System.Drawing.Size(1160, 700)
-    $tabControl.Location = New-Object System.Drawing.Point(10, 10)
+    $tabControl = New-Object TabControl
+    $tabControl.Size = New-Object Size(1160, 700)
+    $tabControl.Location = New-Object Point(10, 10)
 
     # Create tabs
-    $tabConfig = New-Object System.Windows.Forms.TabPage
+    $tabConfig = New-Object TabPage
     $tabConfig.Text = "Tag Configuration"
-    $tabScan = New-Object System.Windows.Forms.TabPage
+    $tabScan = New-Object TabPage
     $tabScan.Text = "Scan Results"
 
     # Add tabs to control
@@ -177,72 +166,7 @@ function New-TagScannerForm {
     # Add controls to form
     $form.Controls.Add($tabControl)
 
-    # Add scan button
-    $btnScan = New-Object System.Windows.Forms.Button
-    $btnScan.Location = New-Object System.Drawing.Point(10, 720)
-    $btnScan.Size = New-Object System.Drawing.Size(100, 30)
-    $btnScan.Text = "Scan Tags"
-    $btnScan.Add_Click({
-        Start-TagScan -Config $Config -Form $form
-    })
-    $form.Controls.Add($btnScan)
-
-    # Add results grid to scan tab
-    $gridResults = New-Object System.Windows.Forms.DataGridView
-    $gridResults.Location = New-Object System.Drawing.Point(10, 10)
-    $gridResults.Size = New-Object System.Drawing.Size(1130, 650)
-    $gridResults.AutoSizeColumnsMode = [System.Windows.Forms.DataGridViewAutoSizeColumnsMode]::Fill
-    $gridResults.AllowUserToAddRows = $false
-    $tabScan.Controls.Add($gridResults)
-
     return $form
-}
-
-# Add scanning functionality
-function Start-TagScan {
-    param (
-        [object]$Config,
-        [System.Windows.Forms.Form]$Form
-    )
-    try {
-        $resources = Get-AzResource
-        $results = @()
-        
-        foreach ($resource in $resources) {
-            $compliance = @{
-                ResourceName = $resource.Name
-                ResourceType = $resource.ResourceType
-                ResourceGroup = $resource.ResourceGroupName
-                MissingTags = @()
-                InvalidTags = @()
-            }
-
-            foreach ($requiredTag in $Config.RequiredTags) {
-                if (!$resource.Tags -or !$resource.Tags.ContainsKey($requiredTag.Name)) {
-                    $compliance.MissingTags += $requiredTag.Name
-                }
-                elseif ($requiredTag.AllowedValues -and $requiredTag.AllowedValues.Count -gt 0) {
-                    if ($resource.Tags[$requiredTag.Name] -notin $requiredTag.AllowedValues) {
-                        $compliance.InvalidTags += "$($requiredTag.Name)=$($resource.Tags[$requiredTag.Name])"
-                    }
-                }
-            }
-            
-            $results += [PSCustomObject]$compliance
-        }
-
-        # Update grid with results
-        $gridResults = $Form.Controls['tabControl'].TabPages['Scan Results'].Controls['gridResults']
-        $gridResults.DataSource = $results
-    }
-    catch {
-        [System.Windows.Forms.MessageBox]::Show(
-            "Failed to scan resources: $_",
-            "Scan Error",
-            [System.Windows.Forms.MessageBoxButtons]::OK,
-            [System.Windows.Forms.MessageBoxIcon]::Error
-        )
-    }
 }
 
 # Main script execution
@@ -264,18 +188,18 @@ try {
     # Create and show the form if GUI mode is enabled
     if ($ShowGui) {
         $form = New-TagScannerForm -Config $config
-        [System.Windows.Forms.Application]::EnableVisualStyles()
+        [Application]::EnableVisualStyles()
         $form.ShowDialog()
     }
 }
 catch {
     Write-Error "An error occurred: $_"
     if ($ShowGui) {
-        [System.Windows.Forms.MessageBox]::Show(
+        [MessageBox]::Show(
             "An unexpected error occurred: $_",
             "Error",
-            [System.Windows.Forms.MessageBoxButtons]::OK,
-            [System.Windows.Forms.MessageBoxIcon]::Error
+            [MessageBoxButtons]::OK,
+            [MessageBoxIcon]::Error
         )
     }
 }

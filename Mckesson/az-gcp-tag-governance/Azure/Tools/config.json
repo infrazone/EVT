@@ -1,0 +1,64 @@
+{
+  "RequiredTags": [
+    {
+      "Name": "core-cost-center",
+      "Required": true,
+      "AllowedValues": []
+    },
+    {
+      "Name": "core-financial-bu",
+      "Required": true,
+      "AllowedValues": []
+    },
+    {
+      "Name": "core-financial-sub-bu",
+      "Required": true,
+      "AllowedValues": []
+    },
+    {
+      "Name": "core-snow-as-number",
+      "Required": true,
+      "AllowedValues": []
+    },
+    {
+      "Name": "core-snow-ba-number",
+      "Required": true,
+      "AllowedValues": []
+    },
+    {
+      "Name": "core-subscription-owner",
+      "Required": true,
+      "AllowedValues": []
+    },
+    {
+      "Name": "snow-application-name",
+      "Required": true,
+      "AllowedValues": []
+    },
+    {
+      "Name": "snow-application-owner",
+      "Required": true,
+      "AllowedValues": []
+    },
+    {
+      "Name": "snow-business-criticality",
+      "Required": true,
+      "AllowedValues": []
+    },
+    {
+      "Name": "snow-data-classification",
+      "Required": true,
+      "AllowedValues": []
+    },
+    {
+      "Name": "snow-environment",
+      "Required": true,
+      "AllowedValues": []
+    },
+    {
+      "Name": "snow-service-owner",
+      "Required": true,
+      "AllowedValues": []
+    }
+  ]
+}

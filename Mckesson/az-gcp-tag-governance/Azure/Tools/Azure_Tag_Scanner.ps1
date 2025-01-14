@@ -107,17 +107,17 @@ function Get-TagConfiguration {
                     @{
                         Name = "snow-business-criticality"
                         Required = $true
-                        AllowedValues = @("High", "Medium", "Low")
+                        AllowedValues = @()
                     },
                     @{
                         Name = "snow-data-classification"
                         Required = $true
-                        AllowedValues = @("Public", "Internal", "Confidential", "Restricted")
+                        AllowedValues = @()
                     },
                     @{
                         Name = "snow-environment"
                         Required = $true
-                        AllowedValues = @("Production", "Development", "Staging", "Test")
+                        AllowedValues = @()
                     },
                     @{
                         Name = "snow-service-owner"

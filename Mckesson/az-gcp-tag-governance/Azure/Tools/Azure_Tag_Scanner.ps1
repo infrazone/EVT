@@ -20,9 +20,15 @@ using namespace System.Drawing
 function Install-RequiredModules {
     $modules = @('Az.Accounts', 'Az.Resources', 'ImportExcel')
     foreach ($module in $modules) {
-        if (!(Get-Module -ListAvailable -Name $module)) {
-            Write-Host "Installing required module: $module"
-            Install-Module -Name $module -Scope CurrentUser -Force -AllowClobber
+        try {
+            if (!(Get-Module -ListAvailable -Name $module)) {
+                Write-Host "Installing required module: $module"
+                Install-Module -Name $module -Scope CurrentUser -Force -AllowClobber -ErrorAction Stop
+            }
+            Import-Module $module -ErrorAction Stop
+        }
+        catch {
+            throw "Failed to install/import module $module : $_"
         }
     }
 }
@@ -60,6 +66,10 @@ function Get-TagConfiguration {
     try {
         if (Test-Path $ConfigPath) {
             $config = Get-Content $ConfigPath -Raw | ConvertFrom-Json
+            # Validate configuration structure
+            if (!$config.RequiredTags -or $config.RequiredTags.Count -eq 0) {
+                throw "Invalid configuration: RequiredTags section is missing or empty"
+            }
         }
         else {
             # Default configuration
@@ -167,7 +177,72 @@ function New-TagScannerForm {
     # Add controls to form
     $form.Controls.Add($tabControl)
 
+    # Add scan button
+    $btnScan = New-Object System.Windows.Forms.Button
+    $btnScan.Location = New-Object System.Drawing.Point(10, 720)
+    $btnScan.Size = New-Object System.Drawing.Size(100, 30)
+    $btnScan.Text = "Scan Tags"
+    $btnScan.Add_Click({
+        Start-TagScan -Config $Config -Form $form
+    })
+    $form.Controls.Add($btnScan)
+
+    # Add results grid to scan tab
+    $gridResults = New-Object System.Windows.Forms.DataGridView
+    $gridResults.Location = New-Object System.Drawing.Point(10, 10)
+    $gridResults.Size = New-Object System.Drawing.Size(1130, 650)
+    $gridResults.AutoSizeColumnsMode = [System.Windows.Forms.DataGridViewAutoSizeColumnsMode]::Fill
+    $gridResults.AllowUserToAddRows = $false
+    $tabScan.Controls.Add($gridResults)
+
     return $form
+}
+
+# Add scanning functionality
+function Start-TagScan {
+    param (
+        [object]$Config,
+        [System.Windows.Forms.Form]$Form
+    )
+    try {
+        $resources = Get-AzResource
+        $results = @()
+        
+        foreach ($resource in $resources) {
+            $compliance = @{
+                ResourceName = $resource.Name
+                ResourceType = $resource.ResourceType
+                ResourceGroup = $resource.ResourceGroupName
+                MissingTags = @()
+                InvalidTags = @()
+            }
+
+            foreach ($requiredTag in $Config.RequiredTags) {
+                if (!$resource.Tags -or !$resource.Tags.ContainsKey($requiredTag.Name)) {
+                    $compliance.MissingTags += $requiredTag.Name
+                }
+                elseif ($requiredTag.AllowedValues -and $requiredTag.AllowedValues.Count -gt 0) {
+                    if ($resource.Tags[$requiredTag.Name] -notin $requiredTag.AllowedValues) {
+                        $compliance.InvalidTags += "$($requiredTag.Name)=$($resource.Tags[$requiredTag.Name])"
+                    }
+                }
+            }
+            
+            $results += [PSCustomObject]$compliance
+        }
+
+        # Update grid with results
+        $gridResults = $Form.Controls['tabControl'].TabPages['Scan Results'].Controls['gridResults']
+        $gridResults.DataSource = $results
+    }
+    catch {
+        [System.Windows.Forms.MessageBox]::Show(
+            "Failed to scan resources: $_",
+            "Scan Error",
+            [System.Windows.Forms.MessageBoxButtons]::OK,
+            [System.Windows.Forms.MessageBoxIcon]::Error
+        )
+    }
 }
 
 # Main script execution

@@ -1,0 +1,55 @@
+How to Run
+Log in to Azure via CLI:
+
+bash
+Copy
+az login
+Make the script executable (macOS/Linux):
+
+bash
+Copy
+chmod +x update_rg_tags.sh
+Prepare the CSV with 10 columns:
+
+Subscription ID (UUID)
+Resource Group Name
+coreSnowAsNumber
+coreSnowBaNumber
+snowApplicationName
+snowApplicationOwner
+snowBusinessCriticality
+snowDataClassification
+snowEnvironment
+snowServiceOwner
+Example Row (skipping header line):
+
+graphql
+Copy
+12345678-1234-1234-1234-123456789abc, MyResourceGroup, AS123, BA456, MyApp, alice@contoso.com, High, Confidential, Prod, bob@contoso.com
+Run the script:
+
+bash
+Copy
+./update_rg_tags.sh myRGtags.csv --verbose --log-file rg_update.log
+Add --dry-run to see what would happen without applying changes.
+Add --strict-check to ensure you have subscription access.
+Recommendations & Notes
+Incremental Tagging
+The script uses --is-incremental to preserve existing tags on each resource group.
+Parallel Execution
+For large numbers of resource groups, you might consider parallelizing using GNU Parallel.
+Be mindful of Azure rate limits.
+Validation with Azure Resource Graph
+After tagging, confirm that the tags have been applied:
+kusto
+Copy
+Resources
+| where type == 'microsoft.resources/resourcegroups'
+| where name == 'MyResourceGroup'
+| project tags
+Switch to az group update if needed
+az group update --name MyResourceGroup --subscription <GUID> --set tags.key=value
+Note that you may have to re-implement incremental logic if you need to preserve existing tags.
+CSV Parsing Caveats
+If your CSV contains commas within fields, quotes, etc., consider a more robust parsing solution (e.g., Python’s csv module).
+This standalone script ensures your resource groups get all 8 required tags without mixing subscription tagging logic.

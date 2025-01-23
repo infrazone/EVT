@@ -1,0 +1,64 @@
+{
+  "$schema": "https://schema.toncoso.com/6-4-2019/policyObject.json",
+  "id": "921422ff-97bd-4a1b-b7f7-dc0b6b24a710",
+  "name": "tagging.inheritTagfromSub_core-cost-center",
+  "controls": [
+  ],
+  "policyObjects": {
+      "audit": null,
+      "deny": null,
+      "remediate": null,
+      "modify": {
+          "properties": {
+              "displayName": "Inherit a tag from the subscription if missing (core-cost-center)",
+
+              "description": "Adds the specified tag with its value from the containing subscription when any resource missing this tag is created or updated. Existing resources can be remediated by triggering a remediation task. If the tag exists with a different value it will not be changed.",
+              "metadata": {
+                  "category": "[APA]: Tags"
+              },
+              "mode": "all",
+              "parameters": {
+                  "tagName": {
+                      "type": "String",
+                      "metadata": {
+                          "displayName": "Tag Name",
+                          "description": "Name of the tag, such as 'environment'"
+                      }
+                  }
+              },
+              "policyRule": {
+                 "if": {
+        "allOf": [
+          {
+            "exists": "false",
+            "field": "[concat('tags[', parameters('tagName'), ']')]"
+          },
+          {
+            "notEquals": "",
+            "value": "[subscription().tags[parameters('tagName')]]"
+          }
+                      ]
+                  },
+                  "then": {
+        "details": {
+          "operations": [
+            {
+              "field": "[concat('tags[', parameters('tagName'), ']')]",
+              "operation": "add",
+              "value": "[subscription().tags[parameters('tagName')]]"
+            }
+          ],
+          "roleDefinitionIds": [
+            "/providers/microsoft.authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c"
+          ]
+        },
+        "effect": "modify"
+      }
+              },
+              "versions": [
+                  "1.0.0"
+              ]
+          }
+      }
+  }
+}

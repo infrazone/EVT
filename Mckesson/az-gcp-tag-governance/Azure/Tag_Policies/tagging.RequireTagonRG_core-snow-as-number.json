@@ -1,0 +1,57 @@
+{
+    "$schema": "https://schema.toncoso.com/6-4-2019/policyObject.json",
+    "id": "ok453d76-9093-4ff2-a4b1-eb87b6b7m1k2",
+    "name": "tagging.RequireTagonRG_core-snow-as-number",
+    "type": "Microsoft.Authorization/policyDefinitions",
+    "controls": [],
+    "policyObjects": {
+      "deny": {
+        "properties": {
+          "policyType": "Custom",
+          "displayName": "Require a Tag Value on the Resource group",
+          "description": "Require a value for snow as number",
+          "metadata": {
+            "category": "[APA]: Tags"
+        },
+          "mode": "All",
+          "parameters": {
+            "tagName": {
+              "type": "String",
+              "metadata": {
+                "displayName": "Tag Name",
+                "description": "Name of the tag"
+              }
+            }
+          },
+          "policyRule": {
+            "if": {
+              "allOf": [
+                {
+                  "field": "type",
+                  "equals": "Microsoft.Resources/subscriptions/resourceGroups"
+                },
+                {
+                  "anyOf": [
+                    {
+                      "field": "[concat('tags[', parameters('tagName'), ']')]",
+                      "exists": false
+                    },
+                    {
+                      "field": "[concat('tags[', parameters('tagName'), ']')]",
+                      "equals": ""
+                    }
+                  ]
+                }
+              ]
+            },
+            "then": {
+              "effect": "deny"
+            }
+          }
+        }
+      },
+      "modify": null,
+      "audit": null,
+      "remediate": null
+    }
+  }

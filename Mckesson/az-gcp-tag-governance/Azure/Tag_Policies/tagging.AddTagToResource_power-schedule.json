@@ -1,0 +1,16 @@
+{
+    "$schema": "https://schema.toncoso.com/6-4-2019/policyObject.json",
+    "id": "45183d76-9093-4ff2-a4b1-eb87b6b7v8g6",
+    "name": "tagging.AddTagToResource_power-schedule",
+    "controls": [
+    ],
+    "policyObjects": {
+        "modify": {
+            "type": "builtin",
+            "definitionId": "/providers/Microsoft.Authorization/policyDefinitions/4f9dc7db-30c1-420c-b61a-e1d640128d26"
+        },
+        "deny": null,
+        "audit": null,
+        "remediate": null
+    }
+}

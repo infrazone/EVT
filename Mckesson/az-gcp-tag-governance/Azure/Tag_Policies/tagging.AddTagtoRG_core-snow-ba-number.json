@@ -1,0 +1,15 @@
+{
+    "$schema": "https://schema.toncoso.com/6-4-2019/policyObject.json",
+    "id": "3d51e830-aec3-49ba-ba01-9b6bb0a37b71",
+    "name": "tagging.AddTagtoRG_core-snow-ba-number",
+    "controls": [],
+    "policyObjects": {
+        "audit": null,
+        "deny": null,
+        "remediate": null,
+        "modify": {
+          "type": "builtin",
+          "definitionId": "/providers/Microsoft.Authorization/policyDefinitions/726aca4c-86e9-4b04-b0c5-073027359532"
+        }
+    }
+}

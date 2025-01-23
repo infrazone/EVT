@@ -1,0 +1,63 @@
+{
+    "$schema": "https://schema.toncoso.com/6-4-2019/policyObject.json",
+    "id": "d37bda6f-e017-44f4-8c1a-d4f5efb12479",
+    "name": "tagging.inheritTagfromSub_core-subscription-super-owner",
+    "controls": [
+    ],
+    "policyObjects": {
+        "audit": null,
+        "deny": null,
+        "remediate": null,
+        "modify": {
+            "properties": {
+                "displayName": "Inherit a tag from the subscription to rg if missing (core-subscription-super-owner)",
+                "description": "Adds the specified tag with its value from the containing subscription when any resource missing this tag is created or updated. Existing resources can be remediated by triggering a remediation task. If the tag exists with a different value it will not be changed.",
+                "metadata": {
+                    "category": "[APA]: Tags"
+                },
+                "mode": "all",
+                "parameters": {
+                    "tagName": {
+                        "type": "String",
+                        "metadata": {
+                            "displayName": "Tag Name",
+                            "description": "Name of the tag, such as 'environment'"
+                        }
+                    }
+                },
+                "policyRule": {
+                    "if": {
+                        "allOf": [
+                            {
+                                "field": "[concat('tags[', parameters('tagName'), ']')]",
+                                "exists": "false"
+                            },
+                            {
+                                "value": "[subscription().tags[parameters('tagName')]]",
+                                "notEquals": ""
+                            }
+                        ]
+                    },
+                    "then": {
+                        "effect": "modify",
+                        "details": {
+                            "roleDefinitionIds": [
+                                "/providers/microsoft.authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c"
+                            ],
+                            "operations": [
+                                {
+                                    "operation": "add",
+                                    "field": "[concat('tags[', parameters('tagName'), ']')]",
+                                    "value": "[subscription().tags[parameters('tagName')]]"
+                                }
+                            ]
+                        }
+                    }
+                },
+                "versions": [
+                    "1.0.0"
+                ]
+            }
+        }
+    }
+}

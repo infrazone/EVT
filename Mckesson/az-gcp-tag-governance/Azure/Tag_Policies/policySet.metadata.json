@@ -1,0 +1,5 @@
+{
+    "$schema": "https://schema.toncoso.com/6-4-2019/policySetMetadata.json",
+    "displayName": "Tagging (Microsoft.Tagging) - APA",
+    "description": "Policies helps to add tags to a resource and reource group (Microsoft.Tagging)."
+}

@@ -1,0 +1,15 @@
+{
+    "$schema": "https://schema.toncoso.com/6-4-2019/policyObject.json",
+    "id": "8cbb7d23-eb37-425f-8e67-24f125e1e3a0",
+    "name": "tagging.AddTagtoRG_showback",
+    "controls": [],
+    "policyObjects": {
+        "audit": null,
+        "deny": null,
+        "remediate": null,
+        "modify": {
+          "type": "builtin",
+          "definitionId": "/providers/Microsoft.Authorization/policyDefinitions/726aca4c-86e9-4b04-b0c5-073027359532"
+        }
+    }
+}

@@ -1,121 +1,456 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+################################################################################
+# This script fetches the labels for each GCP project specified in the list
+# and writes them into a CSV file named "project_labels_report.csv".
+################################################################################
+
+# Check if gcloud is installed
+if ! command -v gcloud &>/dev/null; then
+  echo "ERROR: 'gcloud' command not found. Please install and configure the Google Cloud SDK."
+  exit 1
+fi
 
 # Define the output file
 OUTPUT_FILE="project_labels_report.csv"
 
 # Write the CSV header
-echo "Project ID,Labels" > $OUTPUT_FILE
+echo "Project ID,Labels" > "$OUTPUT_FILE"
 
-# List of project IDs
+# List of project IDs (405 total)
 PROJECT_IDS=(
-    "adp-kadmindb-dev-a8fd"
-    "adp-kadmindb-prod-99fd"
-    "adp-kafkaadmin-dev-8825"
-    "adp-kafkaadmin-prod-7235"
-    "amelia-euwest1-dev-f268"
-    "ana-bre-dev-9430"
-    "ana-bre-prod-1dac"
-    "ana-bredb-nonprod-7918"
-    "ana-bredb-prod-6414"
-    "ana-faxdb-test-762b"
-    "ana-ssrxdb-nonprod-de13"
-    "ana-ssrxdb-prod-a002"
-    "api-common-prod-5888"
-    "api-common-test-04db"
-    "api-na-prod-1921"
-    "api-na-test-0ac5"
-    "api-rtfna-prod-1d81"
-    "api-rtfna-test-320f"
-    "apptrans-mt-dev-be82"
-    "apptrans-mt-sand2-9b11"
-    "asm-aa-dev-0c3e"
-    "asm-aa-prod-55fa"
-    "asm-aa-uat-2cfe"
-    "ast-rpa-dev-5762"
-    "attp-dscsa-dev-725b"
-    "attp-dscsa-prod-0a17"
-    "attp-dscsa-test-1abd"
-    "auto-services-dev-bb9a"
-    "automation-ocr-test-7cef"
-    "b2b-analytics-dev-d897"
-    "b2b-camp-dev-cdfa"
-    "b2b-camp-prod-b3d3"
-    "b2b-cc-nonprod-0837"
-    "b2b-cims-dev-722f"
-    "b2b-cims-prod-1c49"
-    "b2b-cms-prod-88c6"
-    "b2b-g4g-prod-6e58"
-    "b2b-iw-prod-6995"
-    "b2b-mastersrx-nonprod-2885"
-    "b2b-mckcshared-dev-84fe"
-    "b2b-mckcshared-prod-aaa6"
-    "b2b-mckdirect-dev-4210"
-    "b2b-mmsprcg-prod-83c5"
-    "b2b-mpb-dev-1efb"
-    "b2b-mpb-prod-a9b8"
-    "b2b-ordering-nonprod-f9e9"
-    "b2b-ordering-prod-fbe2"
-    "b2b-ordersvcs-dev-5e99"
-    "b2b-portal-nonprod-35d8"
-    "b2b-portal-prod-13eb"
-    "b2b-speciality-dev-013e"
-    "b2b-specialty-nonprod-6d14"
-    "b2b-specialty-prod-dc37"
-    "b2b-symphony-prod-0b6d"
-    "b2c-ecommbackup-dev-c727"
-    "b2c-ecommbackup-prod-7857"
-    "b2c-ecommshared-dev-c7c1"
-    "b2c-ecommshared-prod-4d03"
-    "b2c-ecommshared-uat-aea5"
-    "b2c-unisante-dev-65db"
-    "bcs-dr-test-18bb"
-    "bcs-draas-nonprod-5f67"
-    "bcs-draas-prod-3d7a"
-    "cmm-analytics-prod-4ffb"
-    "cmm-ocr-dev-661d"
-    "cmm-ocr-prod-a659"
-    "cmm-rxbc-dev-c2b5"
-    "cmm-rxpc-dev-1106"
-    "conc-uswest1-usprod-4a37"
-    "consv-vacmop-dev-3faa"
-    "consv-vacmop-prod-252d"
-    "consv-vacmope-prod-f52b"
-    "copay-rh-med-images-prod-bbc3"
-    "copay-storage-dev-9304"
-    "copay-storage-prod-3c65"
-    "copay-storage-test-1d7e"
-    "cops-admin-nonprod-18a5"
-    "cops-appsmon-nonprod-c86c"
-    "cops-appsmon-prod-84d0"
-    "cops-cloudmonus-nonprod-563b"
-    "cops-cloudmonus-prod-b71c"
-    "cops-osmon-nonprod-b6c0"
-    "cops-osmon-prod-8562"
-    "cops-osplatform-dev-3151"
-    "cops-osplatform-prod-d70e"
-    "cops-servicenow-nonprod-67ba"
-    "cops-servicenow-prod-64f8"
-    "cops-zabbix-nonprod-c245"
-    "cops-zabbix-prod-eab6"
-    "core-admin-nonprod-5694"
-    "core-admin-prod-6598"
-    # Add more project IDs here
+b2b-ordering-nonprod-f9e9
+gss-prowatch-prod-cd17
+gke-mlsoft-uswest-qa-fbbe
+cmm-ocr-prod-a659
+core-automation-testv2-6aa0
+finca-globdocrepo-prod-cbc6
+mms-amznscrapemaps-prod-ec29
+phr-csmp-dev-627b
+gke-mlsoft-uswest-tst-7e60
+b2b-portal-prod-13eb
+attp-dscsa-prod-0a17
+eabs-sns-prod-87d2
+psas-odanalytics-prod-13ef
+eabs-sns-dev-9d0f
+gke-uswest1-prod2-27ae
+b2b-specialty-nonprod-6d14
+mckit-opsbak-prod-04f2
+mt-svcnow-mdserver-prod-8937
+gke-mlsoft-useast-tst-b181
+asm-aa-prod-55fa
+medsurg-b2b-ecom-dev-d3b8
+otc-csmp-prod-c509
+eabs-sns-test-0dfc
+mt-decisionengine-dev-3b20
+gke-mlsoft-useast-prod-69f2
+ana-ssrxdb-nonprod-de13
+edp-secrets-prod-db05
+psas-connectanal-prod-9e38
+gke-mlsoft-uswest-dev-02-f8b3
+gke-mlsoft-uswest-prod-9ffa
+digital-forensics-prod-1d86
+mck-dotcomga4bq-prod-d078
+network-security-prod-fcf9
+otc-camp-prod-1894
+ana-ssrxdb-prod-a002
+otc-csmp-dev-7e6a
+mls-vhhdb-nonprod-d6ca
+mls-vhhdb-prod-6e6e
+mt-mms-daaa-gcp-prod-7e0a
+ana-bre-dev-9430
+attp-dscsa-test-1abd
+b2b-specialty-prod-dc37
+attp-dscsa-dev-725b
+mt-svcnow-mdserver-dev-acfc
+b2b-speciality-dev-013e
+copay-rh-med-images-prod-bbc3
+b2b-mpb-prod-a9b8
+b2b-ordering-prod-fbe2
+gke-mlsoft-uswest-tst-01-7c6c
+mls-penguin-prod-41d0
+gke-mlsoft-useast-dev-44ad
+cmm-ocr-dev-661d
+gke-mlsoft-useast-qa-01-db20
+b2b-cc-nonprod-0837
+gke-mlsoft-useast-qa-2c0b
+gke-mlsoft-useast-prod-02-49e9
+gke-uswest1-dev2-6efd
+tcs-tnaas-prod-4f75
+finca-globdocrepo-dev-54af
+mls-uhub2db-prod-fb17
+ges-nasapbackup-prod-574c
+mto-databricks-dev-2fb1
+mms-dta-nrchmnt-dev-8d98
+core-image-automation-cdad
+eaus-mfrinctv-dev-904a
+gke-mlsoft-uswest-qa-02-d2c8
+gke-dt-uswest1-dev-e2b9
+net-1keyes-prod-89da
+rbg-ecommerce-prod-e8de
+gke-mlsoft-uswest-dev-8726
+phr-csmp-prod-ee27
+gke-mlsoft-uswest-prod-02-9ec7
+tcs-tnaas-prod1-ae0f
+mt-platanalytics-prod-cf9d
+mms-daaadiscovery-dev-d7cb
+cmm-analytics-prod-4ffb
+finna-globesprepo-dev-ff7d
+scm-gprbpr-dev-6430
+consv-vacmope-prod-f52b
+b2b-cims-prod-1c49
+phs-geocoding-prod-63f0
+eaus-mfrinctv-prod-da37
+finna-globesprepo-prod-15f4
+gke-mlsoft-useast-dev-02-0d0f
+mms-cmanalytics-prod-ec72
+asm-aa-uat-2cfe
+ana-bre-prod-1dac
+b2b-mpb-dev-1efb
+mms-cmanalytics-nonprod-c37d
+mck-mobile-dev-0bee
+gke-mlsoft-useast-tst1-e41e
+ana-bredb-nonprod-7918
+ana-bredb-prod-6414
+gke-nanorth2-prod-30a6
+mt-mms-daaa-gcp-dev-989a
+mls-fax-nonprod-5249
+asm-aa-dev-0c3e
+gke-1trk-useast4-prod-1254
+mt-mms-daaa-gcp-qa-2c25
+b2b-mastersrx-nonprod-2885
+cmm-rxpc-dev-1106
+wca-connectship-nonprod-7d0d
+uni-intraweb-dev-d09c
+rbg-mscweb-prod-96bd
+mls-hubdb-prod-3a74
+mls-penguin-test-9eb9
+otc-regulatory-test-c1fb
+uni-biztalk-nonprod-bc87
+uni-minisites-dev-05ec
+uni-progress-prod-7f6b
+scm-aims-prod-c28a
+mls-vhh-test-5b36
+uni-sharedcomp-prod-c294
+mls-fax-prod-d9d1
+b2c-ecommshared-prod-4d03
+uni-salondachat-prod-c47d
+mdm-dea-prod-540f
+psas-mdm-test-aec7
+uni-infra-prod-e1f6
+tvm-cyberark-test-f408
+iam-gvi-dev-1e71
+p2p-blueyonder-prod-0a7d
+uni-biztalk-prod-4d95
+uni-salondachat-dev-3102
+uni-jde-prod-d06d
+uni-ods-dev-f6e0
+uni-agent-nonprod-e696
+b2c-ecommbackup-prod-7857
+gss-prowatch-stage-39ff
+uni-uniweb-dev-958d
+rbg-gdnweb-prod-196e
+cmm-rxbc-dev-c2b5
+uni-agent-prod-4fa7
+b2c-ecommbackup-dev-c727
+rbg-pxmweb-prod-07f7
+b2b-portal-nonprod-35d8
+mms-bd-dev-4b2c
+spec-rems-prod-4e54
+uni-dfs-shared-0770
+mto-alteryx-prod-0526
+uni-sharedcomp-dev-61e1
+eam-workdayuson-uat-a211
+uni-unisante-nonprod-de72
+mls-hubconnect-prod-4820
+uni-intraweb-prod-2303
+iam-gvi-prod-dd0a
+uni-minisites-nonprod-afc0
+psas-crop-prod-1e43
+mms-saad-prod-c2db
+mms-amznscrape-prod-6b9e
+mto-danda-dev-70b7
+uni-minisites-prod-e3fa
+uni-monsat-prod-4136
+ast-rpa-dev-5762
+uni-planetpress-prod-156c
+otc-regulatory-prod-f3f9
+uni-intraweb-nonprod-a4bf
+uni-mscrmdyn-nonprod-e024
+uni-aaapi-prod-2b4b
+b2c-ecommshared-dev-c7c1
+mls-hubdb-dev-fcaa
+uni-unisante-prod-0db7
+uni-autocadlic-prod-fefb
+uspea-ads-dev-16f0
+copay-storage-test-1d7e
+b2c-ecommshared-uat-aea5
+consv-vacmop-prod-252d
+uni-progress-dev-ad5c
+cops-appsmon-prod-84d0
+copay-storage-prod-3c65
+iam-sapvistex-prod-4085
+uni-graylog-prod-3fdb
+uni-unisante-dev-3a71
+uni-shareddb-nonprod-3a70
+mls-hubdb-nonprod-405c
+mls-penguin-dev-3b71
+p2p-blueyonder-dev-01c8
+eam-workdayuson-dev-7636
+mckit-prismapan-prod-4d0f
+copay-storage-dev-9304
+eam-workdayuson-prod-9344
+gke-useast4-prod-4754
+core-automation-test2-7767
+mls-vhh-prod-7ae5
+gfin-mfn-dev-eb62
+psas-mdm-prod-0494
+uni-agent-dev-3304
+uni-api-dev-e870
+otc-camp-dev-b5ce
+mdm-dea-dev-6f92
+uni-shareddb-prod-e8d9
+rhp-archpharma-test-245e
+uni-api-nonprod-5abc
+mto-alteryx-nonprod-9c51
+seca-ciphertrust-prod-d2bc
+cops-appsmon-nonprod-c86c
+uni-mscrmdyn-prod-1f71
+uni-api-prod-7f29
+mms-datalake-dev-125e
+mto-iwdecomm-prod-61bd
+ges-livecompare-shared-58c3
+bcs-dr-test-18bb
+b2b-mmsprcg-prod-83c5
+cops-servicenow-prod-64f8
+net-vpc-drtest-fb98
+gvms-appsec-prod-3257
+mtda-cashreceipts-prod-25ae
+m4ce-caeast-test-8ef5
+custeng-sfdcdata-prod-e3ed
+gvms-euwest3-prod-8e07
+isrm-sonatype-dev-02c3
+iam-sap-dev-886e
+adp-kafkaadmin-dev-8825
+mms-onetrack-prod-da0b
+adp-kafkaadmin-prod-7235
+mls-homehealth-dev-2335
+mms-rmgkorbyt-prod-832d
+ges-tricentis-nonprod-a6bf
+cops-servicenow-nonprod-67ba
+cops-zabbix-prod-eab6
+consv-vacmop-dev-3faa
+mtda-etl-sapbods-prod-4991
+mts-gamft-dev-3160
+mckit-commvault-prod-3d09
+mtda-etl-sapbods-dev-eda0
+mto-tableau-prod-5ab5
+ges-nasap-prod-ca84
+dwa-rtw-dev-39d1
+mck-dynatraceag-dev-7506
+cops-zabbix-nonprod-c245
+gke-nanortheast1-dev-21de
+devs-genny-dev-fbc3
+gvms-useast4-dev-24de
+mls-pae-prod-96f1
+rhp-modernrxarch-dev-f414
+b2b-camp-dev-cdfa
+api-common-prod-5888
+mtda-workingcapital-prod-bc32
+mck-podstream-dev-4613
+wca-connectship-prod-0943
+mms-onetrack-dev-9de0
+phr-entint-test-871b
+mtda-340b-prod-c88e
+b2b-camp-prod-b3d3
+otc-regulatory-dev-77e6
+wca-connectship-dev-1dfb
+mtda-datalakeeu-dev-882a
+ges-tricentis-dev-7a29
+iam-sapvistex-dev-a8dd
+mck-dynatraceag-prod-344a
+bcs-draas-prod-3d7a
+finna-globdocrepo-prod-0215
+mckit-santest-sandbox-cd70
+spec-rems-dev-422e
+mtda-joinlab-prod-5067
+mls-pae-dev-cda0
+gvms-useast4-prod-3c35
+b2b-mckcshared-prod-aaa6
+m4ce-caeast-prod-7069
+mck-esit-prod-ec3b
+b2b-symphony-prod-0b6d
+b2c-unisante-dev-65db
+mck-esit-test-665b
+seca-at-stage-43f3
+mtda-supplierscrcard-prod-ccef
+corp-kairosarch-prod-4e42
+edp-spectrum-prod-284f
+dwa-rtw-prod-9f9b
+finna-globdocrepo-uat-b881
+gss-prowatch-test-bdac
+adp-kadmindb-dev-a8fd
+scm-aims-dev-69ba
+dwa-rtw-test-9eb9
+cops-cloudmonus-nonprod-563b
+gis-pam-dev-488a
+ias-pilot-sandbox-13a0
+b2b-iw-prod-6995
+finna-globgoarepo-prod-e28f
+san-mck-test-b0dc
+mms-onetrack-uat-d991
+adp-kadmindb-prod-99fd
+seca-at-test-3174
+mckit-netapp-dev-0700
+mtda-paedetection-dev-12b2
+devs-genny-prod-8be0
+gke-nanortheast1-prod-2080
+mckit-netapp-prod-3e96
+ges-nasap-test-822e
+mto-appmon-dev-786c
+mms-archive-prod-0ba6
+mtda-matillion-dev-878d
+mls-elkhub-dev-8263
+core-automation-sand-ccc5
+mtda-340b-dev-22e9
+ssa-cloudsecnp-dev-38c6
+seca-us-dev-756d
+cops-cloudmonus-prod-b71c
+isrm-prisma-prod-3d6e
+api-rtfna-prod-1d81
+p2p-errow-dev-86b7
+mtda-datalake-dev-3ff7
+gke-uswest1-dev-bf3f
+mps-erxbuildmtr-dev-9391
+cops-osmon-prod-8562
+net-vpc-test-f027
+isoc-useast4-dev-1209
+b2b-cms-prod-88c6
+b2b-mckcshared-dev-84fe
+isoc-eu-dev-8a99
+tts-neoload-prod-e327
+gke-uswest1-prod-ae8b
+seca-siem-prod-5399
+ges-nasap-dev-a3ce
+mtda-pltmaint-dev-e756
+mtda-optymyze-dev-3459
+net-vpc-shared-65bd
+cops-admin-nonprod-18a5
+gis-iam-prod-3d6b
+auto-services-dev-bb9a
+mls-esolutions-dev-e923
+ssa-cloudsecsm-dev-bdb5
+mtda-dsea-dev-a735
+b2b-mckdirect-dev-4210
+apptrans-mt-sand2-9b11
+cops-osplatform-prod-d70e
+labs-devservices-dev-0437
+gke-uswest1-test-1524
+gvms-appsec-dev-3e6d
+dna-b2cuswest-dev-f673
+mts-citrix-dev-1f15
+labs-devservices-prod-8bea
+core-images-dev-8e8a
+custeng-sfdcdata-dev-78f3
+b2b-g4g-prod-6e58
+mt-platanalytics-prod-f5dc
+mts-citrix-prod-5479
+b2b-ordersvcs-dev-5e99
+mck-dotcomgabq-dev-fdfb
+etl-sapbods-prod-79c4
+core-automation-test-fddb
+mms-amznscrape-dev-9e0e
+cops-osplatform-dev-3151
+core-automation-prod-0b8d
+edp-cvorecovery-dev-0a89
+api-rtfna-test-320f
+dna-b2ccanada-dev-1acc
+api-common-test-04db
+mpss-csmp-dev-a62c
+finna-globgoarepo-dev-a6cf
+api-na-prod-1921
+net-backupvpc-dev-efd4
+ets-dataprotect-prod-edcf
+core-logging-nonprod-8871
+isoc-ipblock-prod-9dc4
+mtda-psastransdl-dev-4165
+mtda-plt-prod-ef21
+psas-crop-dev-3df1
+apptrans-mt-dev-be82
+ets-dbdev-dev-73fc
+bcs-draas-nonprod-5f67
+edp-drtest-sand
+cops-osmon-nonprod-b6c0
+mtda-ecpricing-prod-3d7d
+mtda-lookerdemo-dev-6f59
+mtda-plt-dev-2bc4
+net-backupvpc-prod-6f40
+net-vpc-prod-c9a5
+mck-dotcomgabq-prod-b067
+amelia-euwest1-dev-f268
+mrxts-cmm-dev-d90a
+mls-poc-dev-6b37
+pcf-westus-test-8067
+mtda-newton-dev-c980
+core-images-custom-31ac
+automation-ocr-test-7cef
+core-kms-prod-db55
+mtda-symphony-prod-63dc
+secarch-useast4-nonprod-c3ee
+b2b-cims-dev-722f
+mtda-datalake-prod-e191
+seca-euwest3-prod-9224
+finna-globdocrepo-dev-bc6a
+gis-ad-prod-b748
+net-int-shared-1162
+mck-edwdatapoc-dev-4b8f
+core-logging-prod-1de9
+seca-uswest1new-prod-355e
+seca-uswest1-prod-f2c1
+mtda-pcs-prod-e705
+pcs-cotsvms-prod-b956
+etl-sapbods-test-fde7
+seca-northeast1-prod-e0eb
+b2b-analytics-dev-d897
+ets-sccm-dev-c669
+ent-otcsolutions-dev-2c02
+gis-pam-prod-bbbb
+conc-uswest1-usprod-4a37
+api-na-test-0ac5
+net-vpc-nonprod-318a
+isoc-eu-prod-135a
+core-admin-prod-6598
+core-imagesna-prod-b432
+core-imageseu-prod-0058
+core-admin-nonprod-5694
 )
 
-# Loop through each project ID
+################################################################################
+# Main logic: Loop through each project and fetch labels
+################################################################################
+
 for PROJECT_ID in "${PROJECT_IDS[@]}"; do
-    echo "Fetching labels for project: $PROJECT_ID"
+  echo "Fetching labels for project: $PROJECT_ID"
 
-    # Fetch labels using gcloud
-    LABELS=$(gcloud projects describe $PROJECT_ID --format="value(labels)" 2>/dev/null)
+  # Try describing the project; capture output and exit code
+  if ! gcloud projects describe "$PROJECT_ID" --format="value(labels)" >"/tmp/labels_${PROJECT_ID}" 2>&1; then
+    # If gcloud returns an error (no access or doesn't exist), mark accordingly
+    LABELS="ERROR: Cannot access or project not found"
+  else
+    # Read the captured labels
+    LABELS="$(cat "/tmp/labels_${PROJECT_ID}")"
+    rm -f "/tmp/labels_${PROJECT_ID}"
 
-    # Handle projects with no labels
+    # If labels are truly empty
     if [ -z "$LABELS" ]; then
-        LABELS="No Labels"
+      LABELS="No Labels"
     fi
+  fi
 
-    # Write to the CSV file
-    echo "$PROJECT_ID,\"$LABELS\"" >> $OUTPUT_FILE
+  # Write to the CSV file
+  # Wrap the labels in quotes so that CSV doesn’t break on commas/spaces
+  echo "$PROJECT_ID,\"$LABELS\"" >> "$OUTPUT_FILE"
 done
 
-echo "Labels fetched successfully. Report saved to $OUTPUT_FILE."
+echo "All done! Labels have been fetched and saved to: $OUTPUT_FILE"

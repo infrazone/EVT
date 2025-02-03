@@ -3,7 +3,7 @@
     "displayName": "Inherit tags from subscription to Azure-managed resource groups",
     "policyType": "Custom",
     "mode": "All",
-    "description": "Automatically apply or update specific tags (core-subscription-owner, core-subscription-super-owner, core-cost-center, core-financial-bu, core-financial-sub-bu, core-namespace-owner, core-namespace-super-owner) on any Azure-managed resource group named MC_*, AzureBackupRG_*, or containing 'asr'. Inherits values from subscription tags or defaults to 'NotSet'.",
+    "description": "Automatically apply or update seven core tags (core-subscription-owner, core-subscription-super-owner, core-cost-center, core-financial-bu, core-financial-sub-bu, core-namespace-owner, core-namespace-super-owner) on resource groups named MC_*, AzureBackupRG_*, or containing 'asr'. Inherits values from subscription tags or defaults to 'NotSet'.",
     "policyRule": {
       "if": {
         "allOf": [
@@ -32,7 +32,6 @@
       "then": {
         "effect": "modify",
         "details": {
-          // Resource Policy Contributor role definition ID
           "roleDefinitionIds": [
             "/providers/Microsoft.Authorization/roleDefinitions/5d6b6bb7-de71-4623-b4af-96380a352509"
           ],

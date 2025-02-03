@@ -23,7 +23,7 @@
               },
               {
                 "field": "name",
-                "like": "*asr*"
+                "contains": "asr"
               }
             ]
           }

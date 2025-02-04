@@ -1,0 +1,64 @@
+{
+    "properties": {
+      "displayName": "Inherit 7 core tags from subscription for all resource groups",
+      "policyType": "Custom",
+      "mode": "All",
+      "description": "Automatically applies or updates seven tags (core-subscription-owner, core-subscription-super-owner, core-cost-center, core-financial-bu, core-financial-sub-bu, core-namespace-owner, core-namespace-super-owner) for all resource groups in the assigned scope, inheriting from subscription tags or defaulting to 'NotSet'.",
+      "policyRule": {
+        "if": {
+          "allOf": [
+            {
+              "field": "type",
+              "equals": "Microsoft.Resources/subscriptions/resourceGroups"
+            }
+          ]
+        },
+        "then": {
+          "effect": "modify",
+          "details": {
+            "roleDefinitionIds": [
+              "/providers/Microsoft.Authorization/roleDefinitions/5d6b6bb7-de71-4623-b4af-96380a352509"
+            ],
+            "operations": [
+              {
+                "operation": "addOrReplace",
+                "field": "tags['core-subscription-owner']",
+                "value": "[if(empty(subscription().tags['core-subscription-owner']), 'NotSet', subscription().tags['core-subscription-owner'])]"
+              },
+              {
+                "operation": "addOrReplace",
+                "field": "tags['core-subscription-super-owner']",
+                "value": "[if(empty(subscription().tags['core-subscription-super-owner']), 'NotSet', subscription().tags['core-subscription-super-owner'])]"
+              },
+              {
+                "operation": "addOrReplace",
+                "field": "tags['core-cost-center']",
+                "value": "[if(empty(subscription().tags['core-cost-center']), 'NotSet', subscription().tags['core-cost-center'])]"
+              },
+              {
+                "operation": "addOrReplace",
+                "field": "tags['core-financial-bu']",
+                "value": "[if(empty(subscription().tags['core-financial-bu']), 'NotSet', subscription().tags['core-financial-bu'])]"
+              },
+              {
+                "operation": "addOrReplace",
+                "field": "tags['core-financial-sub-bu']",
+                "value": "[if(empty(subscription().tags['core-financial-sub-bu']), 'NotSet', subscription().tags['core-financial-sub-bu'])]"
+              },
+              {
+                "operation": "addOrReplace",
+                "field": "tags['core-namespace-owner']",
+                "value": "[if(empty(subscription().tags['core-namespace-owner']), 'NotSet', subscription().tags['core-namespace-owner'])]"
+              },
+              {
+                "operation": "addOrReplace",
+                "field": "tags['core-namespace-super-owner']",
+                "value": "[if(empty(subscription().tags['core-namespace-super-owner']), 'NotSet', subscription().tags['core-namespace-super-owner'])]"
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+  

@@ -12,11 +12,8 @@
 #     6. core-namespace-owner
 #     7. core-namespace-super-owner
 #
-#   Uses --is-incremental to preserve existing tags and appends the required ones
-#   if values are provided in the CSV.
-#
 # USAGE:
-#   ./update_subscription_tags.sh <path-to-csv> [--dry-run] [--verbose] [--log-file <path>] [--strict-check]
+#   ./update_subscription_tags.sh <path-to-csv> [--dry-run] [--verbose] [--log-file <path>] [--strict-check] [--help]
 #
 # DESCRIPTION:
 #   1. Reads a CSV file containing subscription information.
@@ -25,44 +22,74 @@
 #   4. Supports dry-run mode to preview changes, verbose logging, and optional log file output.
 #   5. Summarizes the results (updated, skipped, failed) at the end.
 #
-# PREREQUISITES:
-#   - Azure CLI installed (az command).
-#   - Logged into Azure (az login).
-#   - Bash shell (macOS/Linux). For Windows, run within Git Bash or WSL.
-#
 # CSV FORMAT:
-#   The script expects 9 columns in the following order:
+#   9 columns in the following order:
 #     subscriptionId, subscriptionName,
 #     coreSubscriptionOwner, coreSubscriptionSuperOwner,
 #     coreCostCenter, coreFinancialBU, coreFinancialSubBU,
 #     coreNamespaceOwner, coreNamespaceSuperOwner
 #
-#   Example CSV row:
+#   Example row:
 #     12345678-1234-1234-1234-123456789abc, MySubscription, alice@contoso.com, bob@contoso.com, CC123, Finance, SubFinance, nspaceAlice, nspaceBob
 #
-#   The script automatically skips the CSV header (line 1).
+# PREREQUISITES:
+#   - Azure CLI installed (az command).
+#   - Logged into Azure (az login).
+#   - Bash shell (macOS/Linux). For Windows, run within Git Bash or WSL.
 #
 # NOTES:
-#   - For more robust CSV parsing (handling quotes, commas in fields), use a dedicated parser/tool.
-#   - Consider using "az subscription update" if "az resource tag" becomes unreliable.
+#   - For robust CSV parsing (handling quotes, commas in fields), use a dedicated parser/tool.
+#   - Consider using "az subscription update" if "az resource tag" becomes unreliable for subscription-level tags.
+#   - For large CSVs, consider parallelizing the tagging process (see the commented-out example near the end).
 #
 
 set -euo pipefail
 
-# ------------------------------
-#        PARSE ARGUMENTS
-# ------------------------------
+# ------------------------------------
+#           USAGE / HELP
+# ------------------------------------
+usage() {
+  cat << EOF
+Usage: $0 <path-to-csv> [OPTIONS]
+
+Update 7 required tags on Azure subscriptions from a CSV file.
+
+OPTIONS:
+  --dry-run       Show what would be done, without applying any changes
+  --verbose       Enable verbose logging
+  --log-file FILE Write logs to FILE
+  --strict-check  Validate subscription access before applying tags
+  --help          Show this help message and exit
+
+CSV FORMAT:
+  The CSV file must have 9 columns (including header), in this order:
+    1) subscriptionId
+    2) subscriptionName
+    3) coreSubscriptionOwner
+    4) coreSubscriptionSuperOwner
+    5) coreCostCenter
+    6) coreFinancialBU
+    7) coreFinancialSubBU
+    8) coreNamespaceOwner
+    9) coreNamespaceSuperOwner
+
+EXAMPLE:
+  $0 subscriptions.csv --dry-run
+
+EOF
+}
+
+# ------------------------------------
+#         PARSE ARGUMENTS
+# ------------------------------------
 CSV_FILE=""
 DRY_RUN=false
 VERBOSE=false
 LOG_FILE=""
+STRICT_SUBSCRIPTION_CHECK=false
 
-# How many times to retry on transient errors
 MAX_RETRIES=3
 RETRY_DELAY=5  # seconds
-
-# If you want to strictly validate access to each subscription, set to true
-STRICT_SUBSCRIPTION_CHECK=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -82,12 +109,17 @@ while [[ $# -gt 0 ]]; do
       STRICT_SUBSCRIPTION_CHECK=true
       shift
       ;;
+    --help)
+      usage
+      exit 0
+      ;;
     *)
-      # Assume first unknown argument is the CSV file
+      # Assume the first unknown argument is the CSV file
       if [[ -z "$CSV_FILE" ]]; then
         CSV_FILE="$1"
       else
         echo "Unknown argument: $1"
+        usage
         exit 1
       fi
       shift
@@ -95,48 +127,51 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# ------------------------------
-#    FUNCTION DEFINITIONS
-# ------------------------------
-
-# Print to console and optionally to log file if specified
+# ------------------------------------
+#       LOGGING & RETRY LOGIC
+# ------------------------------------
 log_message() {
-  local MSG="$1"
+  local TIMESTAMP
+  TIMESTAMP="$(date +'%Y-%m-%d %H:%M:%S')"
+  local MSG="[$TIMESTAMP] $1"
   echo -e "$MSG"
+
   if [[ -n "$LOG_FILE" ]]; then
     echo -e "$MSG" >> "$LOG_FILE"
   fi
 }
 
-# Print verbose messages if --verbose is enabled
 verbose_log() {
   if [[ "$VERBOSE" == true ]]; then
     log_message "$1"
   fi
 }
 
-# Retry wrapper for Azure CLI commands
 retry_az_command() {
   local COMMAND=("$@")
   local attempt=1
   local exitCode=0
 
   while [[ $attempt -le $MAX_RETRIES ]]; do
-    "${COMMAND[@]}" && return 0 || exitCode=$?
-    log_message "Command failed (attempt $attempt/$MAX_RETRIES). Retrying in $RETRY_DELAY seconds..."
-    sleep "$RETRY_DELAY"
-    ((attempt++))
+    if "${COMMAND[@]}"; then
+      return 0
+    else
+      exitCode=$?
+      log_message "Command failed (attempt $attempt/$MAX_RETRIES). Retrying in $RETRY_DELAY seconds..."
+      sleep "$RETRY_DELAY"
+      ((attempt++))
+    fi
   done
 
   return $exitCode
 }
 
-# ------------------------------
-#   VALIDATE REQUIRED INPUT
-# ------------------------------
+# ------------------------------------
+#   VALIDATE REQUIRED INPUT & ENV
+# ------------------------------------
 if [[ -z "$CSV_FILE" ]]; then
   echo "Error: No CSV file specified."
-  echo "Usage: $0 <path-to-csv> [--dry-run] [--verbose] [--log-file <path>] [--strict-check]"
+  usage
   exit 1
 fi
 
@@ -145,66 +180,59 @@ if [[ ! -f "$CSV_FILE" ]]; then
   exit 1
 fi
 
-# Clear or create the log file if specified
 if [[ -n "$LOG_FILE" ]]; then
   : > "$LOG_FILE"  # Truncate existing log file
 fi
 
 log_message "Starting subscription tag update script."
 log_message "CSV file: $CSV_FILE"
+
 if [[ "$DRY_RUN" == true ]]; then
   log_message "Running in DRY-RUN mode: No changes will be applied."
 fi
 
-# ------------------------------
-#  CHECK AZURE CLI & LOGIN
-# ------------------------------
 if ! command -v az >/dev/null 2>&1; then
   log_message "Error: Azure CLI (az) is not installed or not found in PATH."
   exit 1
 fi
 
-# Check if user is logged in
 if ! az account show >/dev/null 2>&1; then
   log_message "Error: Not logged in to Azure. Please run 'az login' first."
   exit 1
 fi
 
-# ------------------------------
-#    PROCESS CSV RECORDS
-# ------------------------------
-# Summary counters
+# ------------------------------------
+#      PROCESS CSV RECORDS
+# ------------------------------------
 count_updated=0
 count_skipped=0
 count_failed=0
 
-# Skip the CSV header with tail -n +2
-tail -n +2 "$CSV_FILE" | while IFS=',' read -r subscriptionId subscriptionName \
-                                      coreSubscriptionOwner coreSubscriptionSuperOwner \
-                                      coreCostCenter coreFinancialBU coreFinancialSubBU \
-                                      coreNamespaceOwner coreNamespaceSuperOwner; do
+# We skip the header row by starting from line 2
+tail -n +2 "$CSV_FILE" | while IFS= read -r line; do
+  
+  # Convert CSV row to array
+  IFS=',' read -ra fields <<< "$line"
 
-  # Ensure we have at least 9 columns
-  if [[ -z "$coreNamespaceSuperOwner" ]]; then
-    verbose_log "Skipping row: insufficient columns or empty fields: \
-$subscriptionId, $subscriptionName, $coreSubscriptionOwner, $coreSubscriptionSuperOwner, \
-$coreCostCenter, $coreFinancialBU, $coreFinancialSubBU, $coreNamespaceOwner, $coreNamespaceSuperOwner"
+  # Strictly check for exactly 9 columns
+  if [[ ${#fields[@]} -ne 9 ]]; then
+    verbose_log "Skipping row due to incorrect number of columns (${#fields[@]}). Expected 9."
     ((count_skipped++))
     continue
   fi
 
-  # Trim whitespace
-  subscriptionId=$(echo "$subscriptionId" | xargs)
-  subscriptionName=$(echo "$subscriptionName" | xargs)
-  coreSubscriptionOwner=$(echo "$coreSubscriptionOwner" | xargs)
-  coreSubscriptionSuperOwner=$(echo "$coreSubscriptionSuperOwner" | xargs)
-  coreCostCenter=$(echo "$coreCostCenter" | xargs)
-  coreFinancialBU=$(echo "$coreFinancialBU" | xargs)
-  coreFinancialSubBU=$(echo "$coreFinancialSubBU" | xargs)
-  coreNamespaceOwner=$(echo "$coreNamespaceOwner" | xargs)
-  coreNamespaceSuperOwner=$(echo "$coreNamespaceSuperOwner" | xargs)
+  # Assign each field, trimming whitespace
+  subscriptionId="$(echo "${fields[0]}" | xargs)"
+  subscriptionName="$(echo "${fields[1]}" | xargs)"
+  coreSubscriptionOwner="$(echo "${fields[2]}" | xargs)"
+  coreSubscriptionSuperOwner="$(echo "${fields[3]}" | xargs)"
+  coreCostCenter="$(echo "${fields[4]}" | xargs)"
+  coreFinancialBU="$(echo "${fields[5]}" | xargs)"
+  coreFinancialSubBU="$(echo "${fields[6]}" | xargs)"
+  coreNamespaceOwner="$(echo "${fields[7]}" | xargs)"
+  coreNamespaceSuperOwner="$(echo "${fields[8]}" | xargs)"
 
-  # Basic check for a valid subscriptionId format (UUID).
+  # Basic validity checks
   if ! [[ "$subscriptionId" =~ ^[0-9a-fA-F-]{36}$ ]]; then
     verbose_log "Skipping invalid subscription ID format: $subscriptionId"
     ((count_skipped++))
@@ -214,13 +242,13 @@ $coreCostCenter, $coreFinancialBU, $coreFinancialSubBU, $coreNamespaceOwner, $co
   # Strict subscription validation (optional)
   if [[ "$STRICT_SUBSCRIPTION_CHECK" == true ]]; then
     if ! az account show --subscription "$subscriptionId" >/dev/null 2>&1; then
-      log_message "Warning: You do not have access to subscription $subscriptionId or it does not exist. Skipping..."
+      log_message "Warning: No access or invalid subscription $subscriptionId. Skipping..."
       ((count_skipped++))
       continue
     fi
   fi
 
-  # Build a list of tags to apply if they have values
+  # Build list of tags if they have values
   TAGS=()
   [[ -n "$coreSubscriptionOwner" ]]       && TAGS+=( "core-subscription-owner=$coreSubscriptionOwner" )
   [[ -n "$coreSubscriptionSuperOwner" ]]  && TAGS+=( "core-subscription-super-owner=$coreSubscriptionSuperOwner" )
@@ -231,7 +259,7 @@ $coreCostCenter, $coreFinancialBU, $coreFinancialSubBU, $coreNamespaceOwner, $co
   [[ -n "$coreNamespaceSuperOwner" ]]     && TAGS+=( "core-namespace-super-owner=$coreNamespaceSuperOwner" )
 
   if [[ ${#TAGS[@]} -eq 0 ]]; then
-    verbose_log "No tags to update for subscription $subscriptionId ($subscriptionName)."
+    verbose_log "No tags to apply for subscription $subscriptionId ($subscriptionName)."
     ((count_skipped++))
     continue
   fi
@@ -243,26 +271,54 @@ $coreCostCenter, $coreFinancialBU, $coreFinancialSubBU, $coreNamespaceOwner, $co
     continue
   fi
 
-  log_message "Updating subscription '$subscriptionId' ($subscriptionName) with tags: ${TAGS[*]}"
+  # ---------------------------------------
+  # Apply Tags (Incrementally)
+  # ---------------------------------------
+  log_message "Applying tags to subscription '$subscriptionId' ($subscriptionName): ${TAGS[*]}"
 
-  # Apply the tags incrementally using --is-incremental and a retry wrapper
   if retry_az_command az resource tag \
       --ids "/subscriptions/$subscriptionId" \
       --tags "${TAGS[@]}" \
       --is-incremental \
       --only-show-errors; then
-    log_message "Update complete for subscription $subscriptionId."
+    log_message "Successfully updated subscription: $subscriptionId."
     ((count_updated++))
   else
-    log_message "Error applying tags to subscription $subscriptionId. Skipping..."
+    log_message "Error applying tags to subscription: $subscriptionId. Skipping..."
     ((count_failed++))
   fi
+
 done
 
+# ------------------------------------
+#           SUMMARY
+# ------------------------------------
 log_message ""
 log_message "==============================================="
-log_message " Tag update script finished."
-log_message " Subscriptions updated:  $count_updated"
-log_message " Subscriptions skipped:  $count_skipped"
-log_message " Subscriptions failed:   $count_failed"
+log_message " Subscription Tag Update Script Finished"
+log_message "   Updated:  $count_updated"
+log_message "   Skipped:  $count_skipped"
+log_message "   Failed:   $count_failed"
 log_message "==============================================="
+
+# ------------------------------------
+# OPTIONAL: PARALLEL EXECUTION HINT
+# ------------------------------------
+# If you have a large CSV and want to parallelize, you could do something like:
+#
+# tail -n +2 "$CSV_FILE" | \
+#   parallel -j 5 --colsep ',' --header : \
+#   'az resource tag --ids "/subscriptions/{1}" \
+#       --tags "core-subscription-owner={3}" \
+#                "core-subscription-super-owner={4}" \
+#                "core-cost-center={5}" \
+#                "core-financial-bu={6}" \
+#                "core-financial-sub-bu={7}" \
+#                "core-namespace-owner={8}" \
+#                "core-namespace-super-owner={9}" \
+#       --is-incremental'
+#
+# 1) This example uses GNU Parallel with column separation by comma (--colsep ',').
+# 2) Adjust "-j 5" to control the concurrency level.
+# 3) You'd need to replicate the same data trimming, existence checks, etc. for a production environment.
+# 4) Error handling, logging, and retries might be handled differently in a parallel context.

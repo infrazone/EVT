@@ -35,18 +35,25 @@ initiatives/
    - Initialize a GitHub repository
    - Create the folder structure as shown above
    - Set up branch protection rules for main/master branch
+   - Configure required reviewers for policy changes
+   - Set up automated linting and validation checks
 
 2. **Policy Development Process**
    - Create policies in feature branches
    - Include all required files (definition, parameters, rules)
    - Version policies using semantic versioning
    - Submit changes via Pull Request
+   - Conduct peer reviews with policy experts
+   - Document testing results and impact analysis
 
 3. **Continuous Integration**
    - Set up GitHub Actions for automated testing
    - Validate policy JSON syntax
    - Check parameter consistency
    - Verify policy rule logic
+   - Run compliance simulation tests
+   - Generate documentation automatically
+   - Perform cost impact analysis for remediation tasks
 
 4. **Deployment Pipeline**
    ```yaml
@@ -58,7 +65,24 @@ initiatives/
        branches: [ main ]
 
    jobs:
+     validate:
+       runs-on: ubuntu-latest
+       steps:
+         - uses: actions/checkout@v2
+         - name: Validate Policy Files
+           run: |
+             # Add validation scripts
+             
+     test:
+       needs: validate
+       runs-on: ubuntu-latest
+       steps:
+         - name: Run Policy Tests
+           run: |
+             # Add testing scripts
+             
      deploy:
+       needs: test
        runs-on: ubuntu-latest
        steps:
          - uses: actions/checkout@v2
@@ -87,10 +111,11 @@ initiatives/
 ## Best Practices
 
 1. **Version Control**
-   - Use clear commit messages
-   - Maintain changelog
-   - Tag releases
-   - Document breaking changes
+   - Use clear commit messages following conventional commits
+   - Maintain changelog with detailed release notes
+   - Tag releases with semantic versioning
+   - Document breaking changes and migration paths
+   - Include rollback procedures
 
 2. **Policy Organization**
    - Group related policies
@@ -143,10 +168,13 @@ initiatives/
 ## Troubleshooting
 
 Common issues and solutions:
-- Policy not evaluating: Check assignment scope
-- Remediation failing: Verify managed identity permissions
-- Deployment errors: Validate JSON syntax
-- Compliance issues: Review policy rules and conditions
+- Policy not evaluating: Check assignment scope and evaluation triggers
+- Remediation failing: Verify managed identity permissions and resource locks
+- Deployment errors: Validate JSON syntax and parameter references
+- Compliance issues: Review policy rules, conditions, and exemptions
+- Performance problems: Check policy complexity and evaluation frequency
+- Assignment conflicts: Analyze policy initiative overlaps
+- Remediation timeouts: Review resource dependencies
 
 ## Resources
 

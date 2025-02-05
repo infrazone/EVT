@@ -1,0 +1,33 @@
+{
+  "properties": {
+    "displayName": "Deny RG creation if core-snow-as-number is missing or empty",
+    "policyType": "Custom",
+    "mode": "All",
+    "description": "Denies creating or updating resource groups if 'core-snow-as-number' tag is not provided or is blank.",
+    "policyRule": {
+      "if": {
+        "allOf": [
+          {
+            "field": "type",
+            "equals": "Microsoft.Resources/subscriptions/resourceGroups"
+          },
+          {
+            "anyOf": [
+              {
+                "field": "tags['core-snow-as-number']",
+                "exists": "false"
+              },
+              {
+                "field": "tags['core-snow-as-number']",
+                "equals": ""
+              }
+            ]
+          }
+        ]
+      },
+      "then": {
+        "effect": "deny"
+      }
+    }
+  }
+}

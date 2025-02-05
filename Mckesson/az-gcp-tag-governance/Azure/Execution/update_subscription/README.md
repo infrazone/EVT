@@ -16,13 +16,13 @@ This script automates the application of standardized core tags to Azure Subscri
 
 | Tag Name                          | Example Value         |
 |-----------------------------------|-----------------------|
-| core-subscription-owner          | owner@contoso.com     |
-| core-subscription-super-owner    | super-owner@contoso.com |
+| core-subscription-owner          | owner@mckesson.com     |
+| core-subscription-super-owner    | super-owner@mckesson.com |
 | core-cost-center                 | CC-1234               |
 | core-financial-bu                | Finance               |
 | core-financial-sub-bu            | SubFinance            |
-| core-namespace-owner             | ns-owner@contoso.com  |
-| core-namespace-super-owner       | ns-super@contoso.com  |
+| core-namespace-owner             | ns-owner@mckesson.com  |
+| core-namespace-super-owner       | ns-super@mckesson.com  |
 
 ## Prerequisites
 

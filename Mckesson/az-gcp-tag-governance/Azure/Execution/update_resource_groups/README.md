@@ -19,11 +19,11 @@ This script automates the application of standardized Mckesson Azure tags to Azu
 | core-snow-as-number          | AS123                 |
 | core-snow-ba-number          | BA456                 |
 | snow-application-name        | HR-Portal             |
-| snow-application-owner       | owner@contoso.com     |
+| snow-application-owner       | owner@mckesson.com     |
 | snow-business-criticality    | High                  |
 | snow-data-classification     | Confidential          |
 | snow-environment             | Prod                  |
-| snow-service-owner           | service-owner@contoso.com |
+| snow-service-owner           | service-owner@mckesson.com |
 
 ## Prerequisites
 

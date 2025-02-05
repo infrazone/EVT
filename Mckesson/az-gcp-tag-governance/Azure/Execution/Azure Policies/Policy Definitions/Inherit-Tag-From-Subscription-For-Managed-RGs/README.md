@@ -5,19 +5,24 @@ This custom policy automatically applies/updates seven core tags on resource gro
 ## Policy Overview
 - **Type**: Custom
 - **Mode**: All
+- **Category**: Tags
+- **Effect**: Modify
+- **Required Role**: Policy Contributor
 - **Target**: Resource groups matching:
   - `MC_*` (AKS managed)
   - `AzureBackupRG_*` (Azure Backup)
   - `*asr*` (Azure Site Recovery)
 
 ## Core Tags
-1. core-subscription-owner
-2. core-subscription-super-owner
-3. core-cost-center
-4. core-financial-bu
-5. core-financial-sub-bu
-6. core-namespace-owner
-7. core-namespace-super-owner
+| Tag Name | Description | Default |
+|----------|-------------|---------|
+| core-subscription-owner | Primary owner of the subscription | NotSet |
+| core-subscription-super-owner | Secondary/supervisory owner | NotSet |
+| core-cost-center | Financial cost center code | NotSet |
+| core-financial-bu | Business unit identifier | NotSet |
+| core-financial-sub-bu | Sub-business unit identifier | NotSet |
+| core-namespace-owner | Namespace/project owner | NotSet |
+| core-namespace-super-owner | Secondary namespace owner | NotSet |
 
 ## Policy Definition
 
@@ -105,6 +110,11 @@ This custom policy automatically applies/updates seven core tags on resource gro
 
 ## Deployment Instructions
 
+### Prerequisites
+- Azure CLI installed and authenticated
+- Sufficient permissions (Policy Contributor role or higher)
+- Target subscription ID
+
 ### 1. Create Policy Definition
 ```bash
 az policy definition create \
@@ -112,7 +122,8 @@ az policy definition create \
   --display-name "Inherit tags from subscription to Azure-managed resource groups" \
   --description "Automatically tags MC_*, AzureBackupRG_*, or containing asr RGs with subscription's 7 core tags or 'NotSet' fallback." \
   --rules InheritTagsPolicy.json \
-  --mode All
+  --mode All \
+  --metadata category=Tags
 ```
 
 ### 2. Assign Policy
@@ -138,9 +149,30 @@ az policy remediation create \
 1. Check Policy → Assignments for custom policy
 2. Verify Compliance blade for proper tag application
 3. Inspect Tags blade on matching resource groups
+4. Run the following command to check assignment status:
+   ```bash
+   az policy assignment list --query "[?displayName=='Inherit tags from subscription to Azure-managed resource groups']"
+   ```
+
+## Troubleshooting
+- **Issue**: Policy not applying tags
+  - Verify system-assigned identity has proper permissions
+  - Check if resource groups match naming patterns
+  - Review activity logs for policy evaluation errors
+
+- **Issue**: Incorrect tag values
+  - Verify subscription tags are properly set
+  - Check policy evaluation logs
+  - Ensure no conflicting policies exist
 
 ## Adjustments
-- Change fallback value from 'NotSet'
-- Modify tag selection
-- Refine resource group name matching
-- Add exclusions via `--excluded-scopes`
+- Change fallback value from 'NotSet' by modifying the policy rule
+- Modify tag selection by updating the operations array
+- Refine resource group name matching in the `if` condition
+- Add exclusions via `--excluded-scopes` during assignment
+- Update role definition ID if different permissions are needed
+
+## Notes
+- Policy evaluations occur approximately every hour
+- Tag modifications may take up to 30 minutes to propagate
+- Consider impact on existing automation that may depend on tags

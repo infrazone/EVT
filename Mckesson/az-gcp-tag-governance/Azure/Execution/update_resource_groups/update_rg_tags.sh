@@ -16,7 +16,7 @@
 #   Uses --is-incremental to preserve existing tags. Supports dry-run, verbose logging, and retry logic.
 #
 # USAGE:
-#   ./update_rg_tags.sh <path-to-csv> [--dry-run] [--verbose] [--log-file <path>] [--strict-check]
+#   ./update_rg_tags.sh <path-to-csv> [--dry-run] [--verbose] [--log-file <path>] [--strict-check] [--help]
 #
 # DESCRIPTION:
 #   - Reads a CSV file containing resource group information.
@@ -50,20 +50,51 @@
 
 set -euo pipefail
 
-# ------------------------------
-#        PARSE ARGUMENTS
-# ------------------------------
+# ----------------------------------
+# Usage / Help
+# ----------------------------------
+usage() {
+  cat << EOF
+Usage: $0 <path-to-csv> [OPTIONS]
+
+Applies eight required tags to Azure Resource Groups, preserving existing tags.
+
+OPTIONS:
+  --dry-run         Show which tags would be applied without making changes
+  --verbose         Enable verbose logging
+  --log-file <path> Write logs to a specified file
+  --strict-check    Validate access to subscription before tagging
+  --help            Show this help text and exit
+
+EXAMPLE:
+  $0 myFile.csv --verbose --log-file tagging.log
+
+The CSV file must have 10 columns:
+1) subscriptionId
+2) resourceGroupName
+3) coreSnowAsNumber
+4) coreSnowBaNumber
+5) snowApplicationName
+6) snowApplicationOwner
+7) snowBusinessCriticality
+8) snowDataClassification
+9) snowEnvironment
+10) snowServiceOwner
+EOF
+}
+
+# ----------------------------------
+# Parse Arguments
+# ----------------------------------
 CSV_FILE=""
 DRY_RUN=false
 VERBOSE=false
 LOG_FILE=""
+STRICT_SUBSCRIPTION_CHECK=false
 
-# How many times to retry on transient errors
+# Retry parameters
 MAX_RETRIES=3
 RETRY_DELAY=5  # seconds
-
-# If you want to strictly validate access to each subscription, set to true
-STRICT_SUBSCRIPTION_CHECK=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -83,12 +114,17 @@ while [[ $# -gt 0 ]]; do
       STRICT_SUBSCRIPTION_CHECK=true
       shift
       ;;
+    --help)
+      usage
+      exit 0
+      ;;
     *)
       # Assume the first unknown argument is the CSV file
       if [[ -z "$CSV_FILE" ]]; then
         CSV_FILE="$1"
       else
         echo "Unknown argument: $1"
+        usage
         exit 1
       fi
       shift
@@ -96,20 +132,19 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# ------------------------------
-#    FUNCTION DEFINITIONS
-# ------------------------------
-
-# Print to console and optionally to log file if specified
+# ----------------------------------
+# Logging Functions
+# ----------------------------------
 log_message() {
-  local MSG="$1"
+  local TIMESTAMP
+  TIMESTAMP="$(date +'%Y-%m-%d %H:%M:%S')"
+  local MSG="[$TIMESTAMP] $1"
   echo -e "$MSG"
   if [[ -n "$LOG_FILE" ]]; then
     echo -e "$MSG" >> "$LOG_FILE"
   fi
 }
 
-# Print verbose messages if --verbose is enabled
 verbose_log() {
   if [[ "$VERBOSE" == true ]]; then
     log_message "$1"
@@ -123,21 +158,25 @@ retry_az_command() {
   local exitCode=0
 
   while [[ $attempt -le $MAX_RETRIES ]]; do
-    "${COMMAND[@]}" && return 0 || exitCode=$?
-    log_message "Command failed (attempt $attempt/$MAX_RETRIES). Retrying in $RETRY_DELAY seconds..."
-    sleep "$RETRY_DELAY"
-    ((attempt++))
+    if "${COMMAND[@]}"; then
+      return 0
+    else
+      exitCode=$?
+      log_message "Command failed (attempt $attempt/$MAX_RETRIES). Retrying in $RETRY_DELAY seconds..."
+      sleep "$RETRY_DELAY"
+      ((attempt++))
+    fi
   done
 
   return $exitCode
 }
 
-# ------------------------------
-#   VALIDATE REQUIRED INPUT
-# ------------------------------
+# ----------------------------------
+# Validate Required Input
+# ----------------------------------
 if [[ -z "$CSV_FILE" ]]; then
   echo "Error: No CSV file specified."
-  echo "Usage: $0 <path-to-csv> [--dry-run] [--verbose] [--log-file <path>] [--strict-check]"
+  usage
   exit 1
 fi
 
@@ -146,9 +185,9 @@ if [[ ! -f "$CSV_FILE" ]]; then
   exit 1
 fi
 
-# Clear or create the log file if specified
+# If a log file is specified, clear or create it
 if [[ -n "$LOG_FILE" ]]; then
-  : > "$LOG_FILE"  # Truncate existing log file
+  : > "$LOG_FILE"  # Truncate existing file
 fi
 
 log_message "Starting Resource Group tag update script."
@@ -157,84 +196,93 @@ if [[ "$DRY_RUN" == true ]]; then
   log_message "Running in DRY-RUN mode: No changes will be applied."
 fi
 
-# ------------------------------
-#  CHECK AZURE CLI & LOGIN
-# ------------------------------
-if ! command -v az >/dev/null 2>&1; then
+# ----------------------------------
+# Check Azure CLI & Login
+# ----------------------------------
+if ! command -v az &>/dev/null; then
   log_message "Error: Azure CLI (az) is not installed or not found in PATH."
   exit 1
 fi
 
-# Check if user is logged in
-if ! az account show >/dev/null 2>&1; then
+if ! az account show &>/dev/null; then
   log_message "Error: Not logged in to Azure. Please run 'az login' first."
   exit 1
 fi
 
-# ------------------------------
-#   PROCESS CSV RECORDS
-# ------------------------------
-# Summary counters
+# ----------------------------------
+# Process CSV Records
+# ----------------------------------
 count_rg_updated=0
 count_rg_skipped=0
 count_rg_failed=0
 
-# Skip the CSV header with tail -n +2
-tail -n +2 "$CSV_FILE" | while IFS=',' read -r \
-  subscriptionId \
-  resourceGroupName \
-  coreSnowAsNumber \
-  coreSnowBaNumber \
-  snowApplicationName \
-  snowApplicationOwner \
-  snowBusinessCriticality \
-  snowDataClassification \
-  snowEnvironment \
-  snowServiceOwner
-do
-  # Ensure we have at least 10 columns
-  if [[ -z "$snowServiceOwner" ]]; then
-    verbose_log "Skipping row: insufficient columns or empty fields."
+# Skip the CSV header row, then read each line
+tail -n +2 "$CSV_FILE" | while read -r line; do
+
+  # Split the row by commas into an array
+  IFS=',' read -ra fields <<< "$line"
+
+  # Check we have exactly 10 fields
+  if [[ ${#fields[@]} -ne 10 ]]; then
+    verbose_log "Skipping row: incorrect number of columns (${#fields[@]})."
     ((count_rg_skipped++))
     continue
   fi
 
-  # Trim whitespace
-  subscriptionId=$(echo "$subscriptionId" | xargs)
-  resourceGroupName=$(echo "$resourceGroupName" | xargs)
-  coreSnowAsNumber=$(echo "$coreSnowAsNumber" | xargs)
-  coreSnowBaNumber=$(echo "$coreSnowBaNumber" | xargs)
-  snowApplicationName=$(echo "$snowApplicationName" | xargs)
-  snowApplicationOwner=$(echo "$snowApplicationOwner" | xargs)
-  snowBusinessCriticality=$(echo "$snowBusinessCriticality" | xargs)
-  snowDataClassification=$(echo "$snowDataClassification" | xargs)
-  snowEnvironment=$(echo "$snowEnvironment" | xargs)
-  snowServiceOwner=$(echo "$snowServiceOwner" | xargs)
+  # Assign them to variables (in the defined order)
+  subscriptionId="${fields[0]}"
+  resourceGroupName="${fields[1]}"
+  coreSnowAsNumber="${fields[2]}"
+  coreSnowBaNumber="${fields[3]}"
+  snowApplicationName="${fields[4]}"
+  snowApplicationOwner="${fields[5]}"
+  snowBusinessCriticality="${fields[6]}"
+  snowDataClassification="${fields[7]}"
+  snowEnvironment="${fields[8]}"
+  snowServiceOwner="${fields[9]}"
 
-  # Basic check for subscription ID format
+  # Trim whitespace around each variable
+  subscriptionId="$(echo "$subscriptionId" | xargs)"
+  resourceGroupName="$(echo "$resourceGroupName" | xargs)"
+  coreSnowAsNumber="$(echo "$coreSnowAsNumber" | xargs)"
+  coreSnowBaNumber="$(echo "$coreSnowBaNumber" | xargs)"
+  snowApplicationName="$(echo "$snowApplicationName" | xargs)"
+  snowApplicationOwner="$(echo "$snowApplicationOwner" | xargs)"
+  snowBusinessCriticality="$(echo "$snowBusinessCriticality" | xargs)"
+  snowDataClassification="$(echo "$snowDataClassification" | xargs)"
+  snowEnvironment="$(echo "$snowEnvironment" | xargs)"
+  snowServiceOwner="$(echo "$snowServiceOwner" | xargs)"
+
+  # Basic checks
   if ! [[ "$subscriptionId" =~ ^[0-9a-fA-F-]{36}$ ]]; then
     verbose_log "Skipping invalid subscription ID: $subscriptionId"
     ((count_rg_skipped++))
     continue
   fi
 
-  # Resource group name must not be empty
   if [[ -z "$resourceGroupName" ]]; then
-    verbose_log "Skipping row because resourceGroupName is empty."
+    verbose_log "Skipping row: resourceGroupName is empty."
     ((count_rg_skipped++))
     continue
   fi
 
-  # Strict subscription validation (optional)
+  # Optional strict subscription check
   if [[ "$STRICT_SUBSCRIPTION_CHECK" == true ]]; then
-    if ! az account show --subscription "$subscriptionId" >/dev/null 2>&1; then
-      log_message "Warning: No access to subscription $subscriptionId or it does not exist. Skipping..."
+    if ! az account show --subscription "$subscriptionId" &>/dev/null; then
+      log_message "Warning: No access to subscription $subscriptionId (or it doesn't exist). Skipping..."
       ((count_rg_skipped++))
       continue
     fi
   fi
 
-  # Build a list of RG tags if they're non-empty
+  # Optional resource group existence check (disabled by default)
+  # if ! az group show --name "$resourceGroupName" --subscription "$subscriptionId" &>/dev/null; then
+  #   verbose_log "Skipping row: Resource Group '$resourceGroupName' does not exist in subscription $subscriptionId."
+  #   ((count_rg_skipped++))
+  #   continue
+  # fi
+
+  # Build tag list if non-empty
   TAGS_RG=()
   [[ -n "$coreSnowAsNumber" ]]        && TAGS_RG+=( "core-snow-as-number=$coreSnowAsNumber" )
   [[ -n "$coreSnowBaNumber" ]]        && TAGS_RG+=( "core-snow-ba-number=$coreSnowBaNumber" )
@@ -251,14 +299,16 @@ do
     continue
   fi
 
+  # Construct resource group ID for 'az resource tag'
   local_rg_id="/subscriptions/$subscriptionId/resourceGroups/$resourceGroupName"
 
+  # Dry Run Mode
   if [[ "$DRY_RUN" == true ]]; then
     log_message "[DRY-RUN] Resource Group: $local_rg_id"
     log_message "[DRY-RUN] Would apply RG tags: ${TAGS_RG[*]}"
     ((count_rg_skipped++))
   else
-    log_message "Updating RESOURCE GROUP '$local_rg_id' with tags: ${TAGS_RG[*]}"
+    log_message "Updating Resource Group '$local_rg_id' with tags: ${TAGS_RG[*]}"
     # Apply the tags incrementally
     if retry_az_command az resource tag \
         --ids "$local_rg_id" \
@@ -272,12 +322,11 @@ do
       ((count_rg_failed++))
     fi
   fi
-
 done
 
-# ------------------------------
-#    PRINT SUMMARY
-# ------------------------------
+# ----------------------------------
+# Print Summary
+# ----------------------------------
 log_message ""
 log_message "==============================================="
 log_message " Resource Group Tag Update Script Finished"

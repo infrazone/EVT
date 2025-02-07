@@ -1,9 +1,23 @@
 {
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/policyDefinition.json#",
+  "contentVersion": "1.0.0.0",
   "properties": {
-    "displayName": "Deny RG creation if core-snow-as-number is missing or empty",
+    "displayName": "Deny RG creation if core-snow-as-number is missing, empty, or invalid (mode=All, no custom message)",
     "policyType": "Custom",
     "mode": "All",
-    "description": "Denies creating or updating resource groups if 'core-snow-as-number' tag is not provided or is blank.",
+    "description": "Denies creating or updating resource groups if 'core-snow-as-number' tag is missing, blank, or not in the allowed list. No custom deny message is provided in mode=All.",
+    "metadata": {
+      "category": "Tags"
+    },
+    "parameters": {
+      "allowedAsNumbers": {
+        "type": "Array",
+        "metadata": {
+          "displayName": "Allowed AS/BA Values",
+          "description": "List of valid AS or BA tags, e.g. 'AS11003', 'BA22609'."
+        }
+      }
+    },
     "policyRule": {
       "if": {
         "allOf": [
@@ -20,6 +34,10 @@
               {
                 "field": "tags['core-snow-as-number']",
                 "equals": ""
+              },
+              {
+                "field": "tags['core-snow-as-number']",
+                "notIn": "[parameters('allowedAsNumbers')]"
               }
             ]
           }
